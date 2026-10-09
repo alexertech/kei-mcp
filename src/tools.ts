@@ -2,7 +2,7 @@ import type { ApiClient } from './api-client.js';
 import { ApiError } from './api-client.js';
 import type { ApprovalConfig } from './approval.js';
 import { approvalPrompt, requestApproval } from './approval.js';
-import { sanitize } from './sanitize.js';
+import { fence } from './fence.js';
 
 function pathRef(ref: string | number | undefined, label: string): string {
   if (ref === undefined || ref === '') {
@@ -56,7 +56,7 @@ export async function listProjects(api: ApiClient, _args: ListProjectsArgs) {
       content: [{
         type: 'text' as const,
         text: projects.map((p) =>
-          `- [${p.id as number}] ${sanitize(p.name as string)} (${p.key as string}): ${sanitize((p.description as string) || 'No description')} [${p.task_count as number} tasks, ${p.bug_count as number} bugs, ${p.member_count as number} members]`
+          `- [${p.id as number}] ${p.name as string} (${p.key as string}): ${fence((p.description as string) || 'No description')} [${p.task_count as number} tasks, ${p.bug_count as number} bugs, ${p.member_count as number} members]`
         ).join('\n'),
       }],
     };
@@ -76,15 +76,15 @@ export async function getBoard(api: ApiClient, args: GetBoardArgs) {
     const board = await api.get<Record<string, unknown>>(`/api/v1/projects/${projectRef}/board`);
     const columns = (board.columns as Array<Record<string, unknown>>).map((col) => {
       const workItems = (col.work_items as Array<Record<string, unknown>>)
-        .map((wi) => `  - [id:${wi.id as number}] [${wi.identifier as string}] ${sanitize(wi.title as string)} (${wi.priority as string})`)
+        .map((wi) => `  - [id:${wi.id as number}] [${wi.identifier as string}] ${wi.title as string} (${wi.priority as string})`)
         .join('\n');
-      return `[id:${col.id as number}] ${sanitize(col.name as string)} (${(col.work_items as Array<unknown>).length} items):\n${workItems || '  (empty)'}`;
+      return `[id:${col.id as number}] ${col.name as string} (${(col.work_items as Array<unknown>).length} items):\n${workItems || '  (empty)'}`;
     }).join('\n\n');
 
     return {
       content: [{
         type: 'text' as const,
-        text: `Board: ${sanitize(board.name as string)}\n\n${columns}`,
+        text: `Board: ${board.name as string}\n\n${columns}`,
       }],
     };
   } catch (error) {
@@ -108,9 +108,9 @@ export async function getWorkItem(api: ApiClient, args: GetWorkItemArgs) {
       ?.map((a) => {
         const user = a.user as Record<string, unknown> | null;
         const move = a.from_column_name || a.to_column_name
-          ? ` (${sanitize((a.from_column_name as string) ?? '?')} -> ${sanitize((a.to_column_name as string) ?? '?')})`
+          ? ` (${(a.from_column_name as string) ?? '?'} -> ${(a.to_column_name as string) ?? '?'})`
           : '';
-        return `[${a.created_at as string}] ${user ? sanitize(user.name as string) : 'Unknown user'}: ${a.action as string}${move}${a.body ? ` - ${sanitize(a.body as string)}` : ''}`;
+        return `[${a.created_at as string}] ${user ? user.name as string : 'Unknown user'}: ${a.action as string}${move}${a.body ? ` - ${fence(a.body as string)}` : ''}`;
       })
       .join('\n') || 'No activities';
 
@@ -119,12 +119,12 @@ export async function getWorkItem(api: ApiClient, args: GetWorkItemArgs) {
     const assignee = wi.assignee as Record<string, unknown> | null;
 
     const text = [
-      `[id:${wi.id as number}] ${wi.identifier as string}: ${sanitize(wi.title as string)}`,
-      `Type: ${wi.type as string} | Priority: ${wi.priority as string} | Column: ${sanitize(column.name as string)} [id:${column.id as number}]`,
-      `Creator: ${creator ? sanitize(creator.name as string) : 'Unknown'} | Assignee: ${assignee ? sanitize(assignee.name as string) : 'Unassigned'}`,
+      `[id:${wi.id as number}] ${wi.identifier as string}: ${wi.title as string}`,
+      `Type: ${wi.type as string} | Priority: ${wi.priority as string} | Column: ${column.name as string} [id:${column.id as number}]`,
+      `Creator: ${creator ? creator.name as string : 'Unknown'} | Assignee: ${assignee ? assignee.name as string : 'Unassigned'}`,
       '',
       'Description:',
-      sanitize((wi.description as string) || '(none)'),
+      fence((wi.description as string) || '(none)'),
       '',
       'Recent Activity:',
       activities,
@@ -174,7 +174,7 @@ export async function createWorkItem(api: ApiClient, args: CreateWorkItemArgs, a
     return {
       content: [{
         type: 'text' as const,
-        text: `Created [id:${wi.id as number}] ${wi.identifier as string}: ${sanitize(wi.title as string)} (${wi.type as string}, ${wi.priority as string} priority)`,
+        text: `Created [id:${wi.id as number}] ${wi.identifier as string}: ${wi.title as string} (${wi.type as string}, ${wi.priority as string} priority)`,
       }],
     };
   } catch (error) {
@@ -226,7 +226,7 @@ export async function updateWorkItem(api: ApiClient, args: UpdateWorkItemArgs, a
     return {
       content: [{
         type: 'text' as const,
-        text: `Updated [id:${wi.id as number}] ${wi.identifier as string}: ${sanitize(wi.title as string)} (${wi.type as string}, ${wi.priority as string} priority)`,
+        text: `Updated [id:${wi.id as number}] ${wi.identifier as string}: ${wi.title as string} (${wi.type as string}, ${wi.priority as string} priority)`,
       }],
     };
   } catch (error) {
@@ -257,7 +257,7 @@ export async function addActivity(api: ApiClient, args: AddActivityArgs, approva
     return {
       content: [{
         type: 'text' as const,
-        text: `Added comment to work item: ${sanitize(activity.body as string)}`,
+        text: `Added comment to work item: ${fence(activity.body as string)}`,
       }],
     };
   } catch (error) {
@@ -278,7 +278,7 @@ export async function listMembers(api: ApiClient, args: ListMembersArgs) {
       content: [{
         type: 'text' as const,
         text: members.map((m) =>
-          `- [id:${m.id as number}] ${sanitize(m.name as string)} [${m.role as string}]`
+          `- [id:${m.id as number}] ${m.name as string} [${m.role as string}]`
         ).join('\n'),
       }],
     };
@@ -300,7 +300,7 @@ export async function listColumns(api: ApiClient, args: ListColumnsArgs) {
       content: [{
         type: 'text' as const,
         text: columns.map((col) =>
-          `- [id:${col.id as number}] ${sanitize(col.name as string)} (position: ${col.position as number})`
+          `- [id:${col.id as number}] ${col.name as string} (position: ${col.position as number})`
         ).join('\n'),
       }],
     };
