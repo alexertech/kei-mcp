@@ -35,16 +35,12 @@ Claude Code prompts for your API key and stores it in secure storage.
 No installation needed:
 
 ```bash
-npx -y kei-mcp --require-approval --api-key YOUR_API_KEY
-```
-
-Or use environment variables:
-
-```bash
 export KEI_API_KEY=your_api_key
 export KEI_API_URL=http://localhost:3100  # optional, defaults to https://kei.alexertech.com
 npx -y kei-mcp --require-approval
 ```
+
+`--api-key` also works, but the key then shows up in the process list.
 
 ## Getting an API Key
 
@@ -125,15 +121,6 @@ Read tools are annotated `readOnlyHint`; write tools are non-destructive. Audit 
 ### Approval Mode
 
 Write operations (`create_work_item`, `update_work_item`, `add_activity`) support a `--require-approval` flag that asks for confirmation before execution. This is advisory: the agent supplies the `approved` flag itself. For a hard guard, use your harness's own tool permissions.
-
-### Verifying the package
-
-Release hashes of the distributed JavaScript files are generated at publish time with `npm run hashes`. Compare them against your installed copy:
-
-```bash
-cd node_modules/kei-mcp
-shasum -a 256 dist/*.js
-```
 
 ## Development
 
