@@ -2,25 +2,25 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { withAudit } from '../src/audit.js';
 
 describe('withAudit', () => {
-  let stdoutSpy: ReturnType<typeof vi.spyOn>;
+  let stderrSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
   });
 
   afterEach(() => {
-    stdoutSpy.mockRestore();
+    stderrSpy.mockRestore();
   });
 
-  it('logs a JSON entry to stdout', async () => {
+  it('logs a JSON entry to stderr', async () => {
     const result = await withAudit('test_tool', { foo: 'bar' }, async () => ({
       content: [{ type: 'text' as const, text: 'ok' }],
     }));
 
     expect(result.content[0].text).toBe('ok');
-    expect(stdoutSpy).toHaveBeenCalledTimes(1);
+    expect(stderrSpy).toHaveBeenCalledTimes(1);
 
-    const logged = JSON.parse(stdoutSpy.mock.calls[0][0] as string);
+    const logged = JSON.parse(stderrSpy.mock.calls[0][0] as string);
     expect(logged.tool).toBe('test_tool');
     expect(logged.params).toEqual({ foo: 'bar' });
     expect(logged.success).toBe(true);
@@ -34,7 +34,7 @@ describe('withAudit', () => {
       isError: true,
     }));
 
-    const logged = JSON.parse(stdoutSpy.mock.calls[0][0] as string);
+    const logged = JSON.parse(stderrSpy.mock.calls[0][0] as string);
     expect(logged.success).toBe(false);
   });
 
@@ -43,7 +43,7 @@ describe('withAudit', () => {
       content: [{ type: 'text' as const, text: 'ok' }],
     }));
 
-    const logged = JSON.parse(stdoutSpy.mock.calls[0][0] as string);
+    const logged = JSON.parse(stderrSpy.mock.calls[0][0] as string);
     expect(logged.params).toEqual({ title: 'Test' });
     expect(logged.params.approved).toBeUndefined();
   });

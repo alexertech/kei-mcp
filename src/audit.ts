@@ -22,7 +22,7 @@ export async function withAudit<T extends { content: unknown[]; isError?: boolea
     success: !result.isError,
     timestamp: new Date().toISOString(),
   };
-  process.stdout.write(JSON.stringify(entry) + '\n');
+  process.stderr.write(JSON.stringify(entry) + '\n');
   return result;
 }
 
