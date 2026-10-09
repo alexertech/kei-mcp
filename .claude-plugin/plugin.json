@@ -11,7 +11,7 @@
   "mcpServers": {
     "kei": {
       "command": "npx",
-      "args": ["-y", "kei-mcp", "--require-approval"],
+      "args": ["-y", "kei-mcp@1.4.2", "--require-approval"],
       "env": { "KEI_API_KEY": "${user_config.api_key}" }
     }
   },

@@ -18,6 +18,8 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
+      - name: Plugin pins the package version
+        run: node -e "const p=require('./package.json').version,m=require('./.claude-plugin/plugin.json');if(m.version!==p||!m.mcpServers.kei.args.includes('kei-mcp@'+p)){console.error('plugin.json version/pin must equal package.json '+p);process.exit(1)}"
       - run: npm run build
       - run: npx vitest run
       - run: npm audit --omit=dev --audit-level=high
