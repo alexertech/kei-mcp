@@ -321,6 +321,23 @@ describe('tools', () => {
       expect(result.isError).toBe(true);
       expect(result.content[0].text).toContain('Error [NOT_FOUND]: Not found');
     });
+
+    it('rejects a missing project reference without calling the API', async () => {
+      const getSpy = vi.spyOn(api, 'get');
+
+      const result = await listColumns(api, {});
+      expect(getSpy).not.toHaveBeenCalled();
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toBe('Error [VALIDATION_ERROR]: Missing project_id or project_key');
+    });
+
+    it('rejects a missing work item reference without calling the API', async () => {
+      const getSpy = vi.spyOn(api, 'get');
+
+      const result = await getWorkItem(api, { project_key: 'PA' });
+      expect(getSpy).not.toHaveBeenCalled();
+      expect(result.content[0].text).toBe('Error [VALIDATION_ERROR]: Missing work_item_id or work_item_key');
+    });
   });
 
   describe('approval gate', () => {

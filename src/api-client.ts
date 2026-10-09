@@ -8,6 +8,17 @@ export class ApiError extends Error {
   }
 }
 
+function formatValidationErrors(data: unknown): string {
+  const errors = (data as { errors?: Record<string, unknown> } | null)?.errors;
+  if (!errors || typeof errors !== 'object') return JSON.stringify(data);
+  return Object.entries(errors)
+    .map(([field, messages]) => {
+      const text = Array.isArray(messages) ? messages.join(', ') : String(messages);
+      return field === 'base' ? text : `${field} ${text}`;
+    })
+    .join('; ');
+}
+
 export interface ApiClientOptions {
   baseUrl: string;
   apiKey: string;
@@ -90,11 +101,11 @@ export class ApiClient {
         throw new ApiError(429, `Rate limited${retryAfter ? `: retry after ${retryAfter}s` : ''}`);
       }
       if (response.status === 404) {
-        throw new ApiError(404, 'Not found');
+        throw new ApiError(404, `Not found: ${new URL(url).pathname}`);
       }
       if (response.status === 422) {
         const errorData = await response.json().catch(() => ({}));
-        throw new ApiError(422, `Validation failed: ${JSON.stringify(errorData)}`);
+        throw new ApiError(422, `Validation failed: ${formatValidationErrors(errorData)}`);
       }
       if (!response.ok) {
         throw new ApiError(response.status, `API error: ${response.status} ${response.statusText}`);

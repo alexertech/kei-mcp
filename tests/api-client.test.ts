@@ -159,6 +159,25 @@ describe('ApiClient', () => {
       await expect(client.post('/api/v1/projects/1/work_items', {})).rejects.toThrow(/Validation failed/);
     });
 
+    it('includes the path in 404 errors', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 404, statusText: 'Not Found' } as Response);
+
+      await expect(client.get('/api/v1/projects/999/columns')).rejects.toThrow('Not found: /api/v1/projects/999/columns');
+    });
+
+    it('formats 422 field and base errors readably', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 422,
+        statusText: 'Unprocessable Entity',
+        json: async () => ({ errors: { title: ["can't be blank"], base: ['Project is frozen'] } }),
+      } as Response);
+
+      await expect(client.post('/api/v1/projects/1/work_items', {})).rejects.toThrow(
+        "Validation failed: title can't be blank; Project is frozen"
+      );
+    });
+
     it('raises ApiError on connection refused', async () => {
       vi.mocked(fetch).mockRejectedValueOnce(new TypeError('fetch failed'));
 
