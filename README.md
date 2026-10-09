@@ -120,7 +120,7 @@ Read tools are annotated `readOnlyHint`; write tools are non-destructive. Audit 
 
 ### Approval Mode
 
-Write operations (`create_work_item`, `update_work_item`, `add_activity`) support a `--require-approval` flag that asks for confirmation before execution. This is advisory: the agent supplies the `approved` flag itself. For a hard guard, use your harness's own tool permissions.
+Write operations (`create_work_item`, `update_work_item`, `add_activity`) support a `--require-approval` flag that asks you for confirmation (MCP elicitation) before execution. The agent cannot approve on its own. If your client doesn't support elicitation, writes are refused.
 
 ## Development
 

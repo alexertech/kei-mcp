@@ -1,7 +1,7 @@
 import type { ApiClient } from './api-client.js';
 import { ApiError } from './api-client.js';
 import type { ApprovalConfig } from './approval.js';
-import { approvalPrompt } from './approval.js';
+import { approvalPrompt, requestApproval } from './approval.js';
 import { sanitize } from './sanitize.js';
 
 function pathRef(ref: string | number | undefined, label: string): string {
@@ -144,11 +144,11 @@ export interface CreateWorkItemArgs {
   priority?: 'none' | 'low' | 'medium' | 'high' | 'urgent';
   column_id?: number;
   description?: string;
-  approved?: boolean;
 }
 
 export async function createWorkItem(api: ApiClient, args: CreateWorkItemArgs, approvalConfig?: ApprovalConfig) {
-  if (approvalConfig?.requireApproval && !args.approved) {
+  try {
+    const projectRef = requireProjectRef(args);
     const details = [
       `Project: ${args.project_key || args.project_id}`,
       `Title: ${args.title}`,
@@ -157,11 +157,9 @@ export async function createWorkItem(api: ApiClient, args: CreateWorkItemArgs, a
       ...(args.column_id != null ? [`Column ID: ${args.column_id}`] : []),
       ...(args.description != null ? [`Description: ${args.description}`] : []),
     ].join('\n');
-    return { content: [{ type: 'text' as const, text: approvalPrompt('create', 'work item', details) }] };
-  }
+    const denied = await requestApproval(approvalConfig, approvalPrompt('create', 'work item', details));
+    if (denied) return denied;
 
-  try {
-    const projectRef = requireProjectRef(args);
     const body: Record<string, unknown> = {
       work_item: {
         title: args.title,
@@ -195,11 +193,12 @@ export interface UpdateWorkItemArgs {
   column_id?: number;
   position?: number;
   assignee_id?: number | null;
-  approved?: boolean;
 }
 
 export async function updateWorkItem(api: ApiClient, args: UpdateWorkItemArgs, approvalConfig?: ApprovalConfig) {
-  if (approvalConfig?.requireApproval && !args.approved) {
+  try {
+    const projectRef = requireProjectRef(args);
+    const workItemRef = requireWorkItemRef(args);
     const changes = [
       ...(args.title != null ? [`Title: ${args.title}`] : []),
       ...(args.description != null ? [`Description: ${args.description}`] : []),
@@ -208,13 +207,10 @@ export async function updateWorkItem(api: ApiClient, args: UpdateWorkItemArgs, a
       ...(args.position != null ? [`Position: ${args.position}`] : []),
       ...(args.assignee_id !== undefined ? [`Assignee ID: ${args.assignee_id ?? 'none (unassign)'}`] : []),
     ].join('\n');
-    const details = `Work item: ${args.work_item_key || args.work_item_id}\n${changes}`;
-    return { content: [{ type: 'text' as const, text: approvalPrompt('update', 'work item', details) }] };
-  }
+    const details = `Project: ${args.project_key || args.project_id}\nWork item: ${args.work_item_key || args.work_item_id}\n${changes}`;
+    const denied = await requestApproval(approvalConfig, approvalPrompt('update', 'work item', details));
+    if (denied) return denied;
 
-  try {
-    const projectRef = requireProjectRef(args);
-    const workItemRef = requireWorkItemRef(args);
     const workItem: Record<string, unknown> = {};
     if (args.title != null) workItem.title = args.title;
     if (args.description != null) workItem.description = args.description;
@@ -244,18 +240,16 @@ export interface AddActivityArgs {
   work_item_id?: number;
   work_item_key?: string;
   body: string;
-  approved?: boolean;
 }
 
 export async function addActivity(api: ApiClient, args: AddActivityArgs, approvalConfig?: ApprovalConfig) {
-  if (approvalConfig?.requireApproval && !args.approved) {
-    const details = `Work item: ${args.work_item_key || args.work_item_id}\nComment: ${args.body}`;
-    return { content: [{ type: 'text' as const, text: approvalPrompt('add comment to', 'work item', details) }] };
-  }
-
   try {
     const projectRef = requireProjectRef(args);
     const workItemRef = requireWorkItemRef(args);
+    const details = `Project: ${args.project_key || args.project_id}\nWork item: ${args.work_item_key || args.work_item_id}\nComment: ${args.body}`;
+    const denied = await requestApproval(approvalConfig, approvalPrompt('add comment to', 'work item', details));
+    if (denied) return denied;
+
     const activity = await api.post<Record<string, unknown>>(
       `/api/v1/projects/${projectRef}/work_items/${workItemRef}/activities`,
       { work_item_activity: { body: args.body } }

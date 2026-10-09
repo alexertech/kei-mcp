@@ -341,21 +341,16 @@ describe('tools', () => {
   });
 
   describe('approval gate', () => {
-    it('returns approval prompt for createWorkItem when requireApproval is true', async () => {
-      const postSpy = vi.spyOn(api, 'post');
+    const yes = { requireApproval: true, confirm: vi.fn().mockResolvedValue(true) };
+    const no = { requireApproval: true, confirm: vi.fn().mockResolvedValue(false) };
+    const unsupported = { requireApproval: true };
 
-      const result = await createWorkItem(api, {
-        project_id: 1,
-        title: 'New Task',
-      }, { requireApproval: true });
-
-      expect(result.content[0].text).toContain('About to create work item');
-      expect(result.content[0].text).toContain('Title: New Task');
-      expect(result.content[0].text).toContain('Approve?');
-      expect(postSpy).not.toHaveBeenCalled();
+    beforeEach(() => {
+      yes.confirm.mockClear();
+      no.confirm.mockClear();
     });
 
-    it('executes createWorkItem when approved is true', async () => {
+    it('asks the user and executes createWorkItem when confirmed', async () => {
       vi.spyOn(api, 'post').mockResolvedValueOnce({
         id: 99,
         identifier: 'PA-1',
@@ -364,76 +359,67 @@ describe('tools', () => {
         priority: 'none',
       });
 
-      const result = await createWorkItem(api, {
-        project_id: 1,
-        title: 'New Task',
-        approved: true,
-      }, { requireApproval: true });
+      const result = await createWorkItem(api, { project_id: 1, title: 'New Task' }, yes);
 
+      expect(yes.confirm).toHaveBeenCalledWith(expect.stringContaining('Title: New Task'));
       expect(result.content[0].text).toContain('Created');
     });
 
-    it('returns approval prompt for updateWorkItem when requireApproval is true', async () => {
+    it('does not call the API when the user declines', async () => {
+      const postSpy = vi.spyOn(api, 'post');
       const patchSpy = vi.spyOn(api, 'patch');
 
-      const result = await updateWorkItem(api, {
-        project_id: 1,
-        work_item_id: 1,
-        title: 'Updated',
-      }, { requireApproval: true });
+      const created = await createWorkItem(api, { project_id: 1, title: 'New Task' }, no);
+      const updated = await updateWorkItem(api, { project_id: 1, work_item_id: 1, title: 'Updated' }, no);
+      const commented = await addActivity(api, { project_id: 1, work_item_id: 1, body: 'A comment' }, no);
 
-      expect(result.content[0].text).toContain('About to update work item');
-      expect(result.content[0].text).toContain('Title: Updated');
+      for (const r of [created, updated, commented]) {
+        expect(r.content[0].text).toContain('declined');
+      }
+      expect(postSpy).not.toHaveBeenCalled();
       expect(patchSpy).not.toHaveBeenCalled();
     });
 
-    it('executes updateWorkItem when approved is true', async () => {
-      vi.spyOn(api, 'patch').mockResolvedValueOnce({
-        id: 42,
-        identifier: 'PA-1',
-        title: 'Updated',
-        type: 'Task',
-        priority: 'none',
-      });
-
-      const result = await updateWorkItem(api, {
-        project_id: 1,
-        work_item_id: 1,
-        title: 'Updated',
-        approved: true,
-      }, { requireApproval: true });
-
-      expect(result.content[0].text).toContain('Updated');
-    });
-
-    it('returns approval prompt for addActivity when requireApproval is true', async () => {
+    it('refuses writes when the client cannot ask the user', async () => {
       const postSpy = vi.spyOn(api, 'post');
 
-      const result = await addActivity(api, {
-        project_id: 1,
-        work_item_id: 1,
-        body: 'A comment',
-      }, { requireApproval: true });
+      const result = await createWorkItem(api, { project_id: 1, title: 'New Task' }, unsupported);
 
-      expect(result.content[0].text).toContain('About to add comment to work item');
-      expect(result.content[0].text).toContain('Comment: A comment');
+      expect(result.content[0].text).toContain('no elicitation support');
       expect(postSpy).not.toHaveBeenCalled();
     });
 
-    it('executes addActivity when approved is true', async () => {
-      vi.spyOn(api, 'post').mockResolvedValueOnce({
-        body: 'A comment',
-      });
+    it('ignores a model-supplied approved flag', async () => {
+      const postSpy = vi.spyOn(api, 'post');
 
-      const result = await addActivity(api, {
-        project_id: 1,
-        work_item_id: 1,
-        body: 'A comment',
-        approved: true,
-      }, { requireApproval: true });
+      const result = await createWorkItem(
+        api,
+        { project_id: 1, title: 'New Task', approved: true } as Parameters<typeof createWorkItem>[1],
+        unsupported
+      );
 
-      expect(result.content[0].text).toContain('Added comment');
+      expect(result.content[0].text).toContain('Write not executed');
+      expect(postSpy).not.toHaveBeenCalled();
     });
+
+    it('validates refs before asking the user', async () => {
+      const result = await updateWorkItem(api, { project_id: 1, title: 'Updated' }, yes);
+
+      expect(yes.confirm).not.toHaveBeenCalled();
+      expect(result.content[0].text).toBe('Error [VALIDATION_ERROR]: Missing work_item_id or work_item_key');
+    });
+
+    it('includes the project in update and comment prompts', async () => {
+      vi.spyOn(api, 'patch').mockResolvedValueOnce({ id: 1, identifier: 'PA-1', title: 'U', type: 'Task', priority: 'none' });
+      vi.spyOn(api, 'post').mockResolvedValueOnce({ body: 'c' });
+
+      await updateWorkItem(api, { project_key: 'PA', work_item_id: 1, title: 'U' }, yes);
+      await addActivity(api, { project_key: 'PA', work_item_id: 1, body: 'c' }, yes);
+
+      expect(yes.confirm).toHaveBeenNthCalledWith(1, expect.stringContaining('Project: PA'));
+      expect(yes.confirm).toHaveBeenNthCalledWith(2, expect.stringContaining('Project: PA'));
+    });
+
 
     it('executes without approval when requireApproval is false', async () => {
       vi.spyOn(api, 'post').mockResolvedValueOnce({

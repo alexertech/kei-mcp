@@ -17,11 +17,33 @@ import {
 
 const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
 
-export function createServer(api: ApiClient, approvalConfig?: ApprovalConfig): McpServer {
+export function createServer(api: ApiClient, flags?: ApprovalConfig): McpServer {
   const server = new McpServer({
     name: 'kei-mcp',
     version,
   });
+
+  const approvalConfig: ApprovalConfig | undefined = flags?.requireApproval
+    ? {
+        requireApproval: true,
+        confirm: async (message) => {
+          if (!server.server.getClientCapabilities()?.elicitation) return false;
+          try {
+            const result = await server.server.elicitInput({
+              message,
+              requestedSchema: {
+                type: 'object',
+                properties: { confirm: { type: 'boolean', title: 'Approve this write?' } },
+                required: ['confirm'],
+              },
+            });
+            return result.action === 'accept' && result.content?.confirm === true;
+          } catch {
+            return false;
+          }
+        },
+      }
+    : flags;
 
   server.registerTool(
     'list_projects',
@@ -75,7 +97,6 @@ export function createServer(api: ApiClient, approvalConfig?: ApprovalConfig): M
         priority: z.enum(['none', 'low', 'medium', 'high', 'urgent']).optional().describe('The priority level'),
         column_id: z.number().optional().describe('The column ID (use list_columns to find valid IDs)'),
         description: z.string().optional().describe('The work item description (optional)'),
-        approved: z.boolean().optional().describe('Set to true to confirm execution when approval is required'),
       },
       annotations: { readOnlyHint: false, destructiveHint: false },
     },
@@ -97,7 +118,6 @@ export function createServer(api: ApiClient, approvalConfig?: ApprovalConfig): M
         column_id: z.number().optional().describe('Move to this column ID (optional)'),
         position: z.number().optional().describe('Position within the column (optional)'),
         assignee_id: z.number().nullable().optional().describe('Assign to this user ID, or null to unassign (optional)'),
-        approved: z.boolean().optional().describe('Set to true to confirm execution when approval is required'),
       },
       annotations: { readOnlyHint: false, destructiveHint: false },
     },
@@ -114,7 +134,6 @@ export function createServer(api: ApiClient, approvalConfig?: ApprovalConfig): M
         work_item_id: z.number().optional().describe('The work item ID (use either work_item_id or work_item_key)'),
         work_item_key: z.string().optional().describe('The work item identifier, e.g. "KEI-9" (use either work_item_id or work_item_key)'),
         body: z.string().describe('The comment text'),
-        approved: z.boolean().optional().describe('Set to true to confirm execution when approval is required'),
       },
       annotations: { readOnlyHint: false, destructiveHint: false },
     },
