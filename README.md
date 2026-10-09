@@ -51,6 +51,15 @@ Then configure the API key in your Claude Code settings:
 }
 ```
 
+### Claude Code plugin marketplace
+
+```bash
+claude plugin marketplace add alexertech/kei_app_mcp
+claude plugin install kei-mcp@kei
+```
+
+Claude Code prompts for your API key and stores it securely.
+
 ### OpenCode
 
 Add to your `opencode.json`:

@@ -1,0 +1,12 @@
+{
+  "name": "kei",
+  "description": "Kei project management plugins",
+  "owner": { "name": "Alex Barrios" },
+  "plugins": [
+    {
+      "name": "kei-mcp",
+      "source": "./",
+      "description": "Manage Kei projects, boards and work items from Claude Code"
+    }
+  ]
+}

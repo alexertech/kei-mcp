@@ -1,0 +1,20 @@
+{
+  "name": "kei-mcp",
+  "displayName": "Kei",
+  "version": "1.4.0",
+  "description": "Manage Kei projects, boards and work items from Claude Code",
+  "author": { "name": "Alex Barrios" },
+  "homepage": "https://github.com/alexertech/kei_app_mcp",
+  "repository": "https://github.com/alexertech/kei_app_mcp",
+  "license": "MIT",
+  "keywords": ["mcp", "kei", "project-management"],
+  "userConfig": {
+    "api_key": {
+      "type": "string",
+      "title": "Kei API key",
+      "description": "Generate one in Kei under Settings > API Keys",
+      "sensitive": true,
+      "required": true
+    }
+  }
+}
