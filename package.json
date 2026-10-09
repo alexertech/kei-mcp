@@ -22,8 +22,8 @@
     "opencode"
   ],
   "author": "Alex Barrios",
-  "repository": { "type": "git", "url": "git+https://github.com/alexertech/kei_app_mcp.git" },
-  "homepage": "https://github.com/alexertech/kei_app_mcp#readme",
+  "repository": { "type": "git", "url": "git+https://github.com/alexertech/kei-mcp.git" },
+  "homepage": "https://github.com/alexertech/kei-mcp#readme",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
