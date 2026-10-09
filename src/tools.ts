@@ -8,6 +8,9 @@ function pathRef(ref: string | number | undefined, label: string): string {
   if (ref === undefined || ref === '') {
     throw new ApiError(422, `Missing ${label}`);
   }
+  if (ref === '.' || ref === '..') {
+    throw new ApiError(422, `Invalid ${label}`);
+  }
   return encodeURIComponent(String(ref));
 }
 

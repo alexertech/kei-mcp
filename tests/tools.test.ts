@@ -46,6 +46,17 @@ describe('tools', () => {
       await getWorkItem(api, { project_key: '../x?y', work_item_key: 'a/b' });
       expect(get).toHaveBeenCalledWith('/api/v1/projects/..%2Fx%3Fy/work_items/a%2Fb');
     });
+
+    it('rejects dot-segment refs without calling the API', async () => {
+      const get = vi.spyOn(api, 'get');
+
+      const project = await getWorkItem(api, { project_key: '..', work_item_key: 'PA-1' });
+      const workItem = await getWorkItem(api, { project_key: 'PA', work_item_key: '.' });
+
+      expect(project.content[0].text).toBe('Error [VALIDATION_ERROR]: Invalid project_id or project_key');
+      expect(workItem.content[0].text).toBe('Error [VALIDATION_ERROR]: Invalid work_item_id or work_item_key');
+      expect(get).not.toHaveBeenCalled();
+    });
   });
 
   describe('getBoard', () => {

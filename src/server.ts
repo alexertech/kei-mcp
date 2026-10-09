@@ -17,6 +17,12 @@ import {
 
 const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
 
+const id = z.number().int().positive();
+const projectId = id;
+const workItemId = id;
+const projectKey = z.string().regex(/^[A-Za-z][A-Za-z0-9]*$/, 'Letters and digits only, e.g. "KEI"');
+const workItemKey = z.string().regex(/^[A-Za-z][A-Za-z0-9]*-\d+$/, 'Format "KEI-9"');
+
 export function createServer(api: ApiClient, flags?: ApprovalConfig): McpServer {
   const server = new McpServer({
     name: 'kei-mcp',
@@ -59,8 +65,8 @@ export function createServer(api: ApiClient, flags?: ApprovalConfig): McpServer 
     {
       description: 'Get a project\'s board with all columns and work items. Accepts either project_id or project_key.',
       inputSchema: {
-        project_id: z.number().optional().describe('The project ID (use either project_id or project_key)'),
-        project_key: z.string().optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
+        project_id: projectId.optional().describe('The project ID (use either project_id or project_key)'),
+        project_key: projectKey.optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
       },
       annotations: { readOnlyHint: true },
     },
@@ -72,10 +78,10 @@ export function createServer(api: ApiClient, flags?: ApprovalConfig): McpServer 
     {
       description: 'Get detailed information about a specific work item (task or bug) including description and recent activity. Accepts either numeric IDs or human-readable keys.',
       inputSchema: {
-        project_id: z.number().optional().describe('The project ID (use either project_id or project_key)'),
-        project_key: z.string().optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
-        work_item_id: z.number().optional().describe('The work item ID (use either work_item_id or work_item_key)'),
-        work_item_key: z.string().optional().describe('The work item identifier, e.g. "KEI-9" (use either work_item_id or work_item_key)'),
+        project_id: projectId.optional().describe('The project ID (use either project_id or project_key)'),
+        project_key: projectKey.optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
+        work_item_id: workItemId.optional().describe('The work item ID (use either work_item_id or work_item_key)'),
+        work_item_key: workItemKey.optional().describe('The work item identifier, e.g. "KEI-9" (use either work_item_id or work_item_key)'),
       },
       annotations: { readOnlyHint: true },
     },
@@ -90,12 +96,12 @@ export function createServer(api: ApiClient, flags?: ApprovalConfig): McpServer 
     {
       description: 'Create a new task or bug in a project. Use list_columns first to get a valid column_id.',
       inputSchema: {
-        project_id: z.number().optional().describe('The project ID (use either project_id or project_key)'),
-        project_key: z.string().optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
+        project_id: projectId.optional().describe('The project ID (use either project_id or project_key)'),
+        project_key: projectKey.optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
         title: z.string().describe('The work item title'),
         type: z.enum(['Task', 'Bug']).optional().describe('The work item type'),
         priority: z.enum(['none', 'low', 'medium', 'high', 'urgent']).optional().describe('The priority level'),
-        column_id: z.number().optional().describe('The column ID (use list_columns to find valid IDs)'),
+        column_id: id.optional().describe('The column ID (use list_columns to find valid IDs)'),
         description: z.string().optional().describe('The work item description (optional)'),
       },
       annotations: { readOnlyHint: false, destructiveHint: false },
@@ -108,16 +114,16 @@ export function createServer(api: ApiClient, flags?: ApprovalConfig): McpServer 
     {
       description: 'Update a work item\'s title, description, priority, column, position, or assignee. Accepts either numeric IDs or human-readable keys.',
       inputSchema: {
-        project_id: z.number().optional().describe('The project ID (use either project_id or project_key)'),
-        project_key: z.string().optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
-        work_item_id: z.number().optional().describe('The work item ID (use either work_item_id or work_item_key)'),
-        work_item_key: z.string().optional().describe('The work item identifier, e.g. "KEI-9" (use either work_item_id or work_item_key)'),
+        project_id: projectId.optional().describe('The project ID (use either project_id or project_key)'),
+        project_key: projectKey.optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
+        work_item_id: workItemId.optional().describe('The work item ID (use either work_item_id or work_item_key)'),
+        work_item_key: workItemKey.optional().describe('The work item identifier, e.g. "KEI-9" (use either work_item_id or work_item_key)'),
         title: z.string().optional().describe('New title (optional)'),
         description: z.string().optional().describe('New description (optional)'),
         priority: z.enum(['none', 'low', 'medium', 'high', 'urgent']).optional().describe('New priority (optional)'),
-        column_id: z.number().optional().describe('Move to this column ID (optional)'),
-        position: z.number().optional().describe('Position within the column (optional)'),
-        assignee_id: z.number().nullable().optional().describe('Assign to this user ID, or null to unassign (optional)'),
+        column_id: id.optional().describe('Move to this column ID (optional)'),
+        position: z.number().int().min(0).optional().describe('Position within the column (optional)'),
+        assignee_id: id.nullable().optional().describe('Assign to this user ID, or null to unassign (optional)'),
       },
       annotations: { readOnlyHint: false, destructiveHint: false },
     },
@@ -129,10 +135,10 @@ export function createServer(api: ApiClient, flags?: ApprovalConfig): McpServer 
     {
       description: 'Add a comment activity to a work item. Accepts either numeric IDs or human-readable keys.',
       inputSchema: {
-        project_id: z.number().optional().describe('The project ID (use either project_id or project_key)'),
-        project_key: z.string().optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
-        work_item_id: z.number().optional().describe('The work item ID (use either work_item_id or work_item_key)'),
-        work_item_key: z.string().optional().describe('The work item identifier, e.g. "KEI-9" (use either work_item_id or work_item_key)'),
+        project_id: projectId.optional().describe('The project ID (use either project_id or project_key)'),
+        project_key: projectKey.optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
+        work_item_id: workItemId.optional().describe('The work item ID (use either work_item_id or work_item_key)'),
+        work_item_key: workItemKey.optional().describe('The work item identifier, e.g. "KEI-9" (use either work_item_id or work_item_key)'),
         body: z.string().describe('The comment text'),
       },
       annotations: { readOnlyHint: false, destructiveHint: false },
@@ -145,8 +151,8 @@ export function createServer(api: ApiClient, flags?: ApprovalConfig): McpServer 
     {
       description: 'List all members of a project with their roles. Each member includes their numeric user ID.',
       inputSchema: {
-        project_id: z.number().optional().describe('The project ID (use either project_id or project_key)'),
-        project_key: z.string().optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
+        project_id: projectId.optional().describe('The project ID (use either project_id or project_key)'),
+        project_key: projectKey.optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
       },
       annotations: { readOnlyHint: true },
     },
@@ -158,8 +164,8 @@ export function createServer(api: ApiClient, flags?: ApprovalConfig): McpServer 
     {
       description: 'List all columns of a project\'s board with their IDs, names, and positions. Use this to find valid column_id values for create_work_item.',
       inputSchema: {
-        project_id: z.number().optional().describe('The project ID (use either project_id or project_key)'),
-        project_key: z.string().optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
+        project_id: projectId.optional().describe('The project ID (use either project_id or project_key)'),
+        project_key: projectKey.optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
       },
       annotations: { readOnlyHint: true },
     },
