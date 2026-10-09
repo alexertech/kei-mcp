@@ -4,6 +4,10 @@ import type { ApprovalConfig } from './approval.js';
 import { approvalPrompt } from './approval.js';
 import { sanitize } from './sanitize.js';
 
+function pathRef(ref: string | number | undefined): string {
+  return encodeURIComponent(String(ref));
+}
+
 function errorResult(error: unknown) {
   if (error instanceof ApiError) {
     let errorType: string;
@@ -55,7 +59,7 @@ export interface GetBoardArgs {
 
 export async function getBoard(api: ApiClient, args: GetBoardArgs) {
   try {
-    const projectRef = args.project_key || args.project_id;
+    const projectRef = pathRef(args.project_key || args.project_id);
     const board = await api.get<Record<string, unknown>>(`/api/v1/projects/${projectRef}/board`);
     const columns = (board.columns as Array<Record<string, unknown>>).map((col) => {
       const workItems = (col.work_items as Array<Record<string, unknown>>)
@@ -84,8 +88,8 @@ export interface GetWorkItemArgs {
 
 export async function getWorkItem(api: ApiClient, args: GetWorkItemArgs) {
   try {
-    const projectRef = args.project_key || args.project_id;
-    const workItemRef = args.work_item_key || args.work_item_id;
+    const projectRef = pathRef(args.project_key || args.project_id);
+    const workItemRef = pathRef(args.work_item_key || args.work_item_id);
     const wi = await api.get<Record<string, unknown>>(`/api/v1/projects/${projectRef}/work_items/${workItemRef}`);
     const activities = (wi.activities as Array<Record<string, unknown>> | undefined)
       ?.map((a) => {
@@ -141,7 +145,7 @@ export async function createWorkItem(api: ApiClient, args: CreateWorkItemArgs, a
   }
 
   try {
-    const projectRef = args.project_key || args.project_id;
+    const projectRef = pathRef(args.project_key || args.project_id);
     const body: Record<string, unknown> = {
       work_item: {
         title: args.title,
@@ -193,8 +197,8 @@ export async function updateWorkItem(api: ApiClient, args: UpdateWorkItemArgs, a
   }
 
   try {
-    const projectRef = args.project_key || args.project_id;
-    const workItemRef = args.work_item_key || args.work_item_id;
+    const projectRef = pathRef(args.project_key || args.project_id);
+    const workItemRef = pathRef(args.work_item_key || args.work_item_id);
     const workItem: Record<string, unknown> = {};
     if (args.title != null) workItem.title = args.title;
     if (args.description != null) workItem.description = args.description;
@@ -234,8 +238,8 @@ export async function addActivity(api: ApiClient, args: AddActivityArgs, approva
   }
 
   try {
-    const projectRef = args.project_key || args.project_id;
-    const workItemRef = args.work_item_key || args.work_item_id;
+    const projectRef = pathRef(args.project_key || args.project_id);
+    const workItemRef = pathRef(args.work_item_key || args.work_item_id);
     const activity = await api.post<Record<string, unknown>>(
       `/api/v1/projects/${projectRef}/work_items/${workItemRef}/activities`,
       { work_item_activity: { body: args.body } }
@@ -258,7 +262,7 @@ export interface ListMembersArgs {
 
 export async function listMembers(api: ApiClient, args: ListMembersArgs) {
   try {
-    const projectRef = args.project_key || args.project_id;
+    const projectRef = pathRef(args.project_key || args.project_id);
     const members = await api.get<Array<Record<string, unknown>>>(`/api/v1/projects/${projectRef}/members`);
     return {
       content: [{
@@ -280,7 +284,7 @@ export interface ListColumnsArgs {
 
 export async function listColumns(api: ApiClient, args: ListColumnsArgs) {
   try {
-    const projectRef = args.project_key || args.project_id;
+    const projectRef = pathRef(args.project_key || args.project_id);
     const columns = await api.get<Array<Record<string, unknown>>>(`/api/v1/projects/${projectRef}/columns`);
     return {
       content: [{

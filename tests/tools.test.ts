@@ -39,6 +39,15 @@ describe('tools', () => {
     });
   });
 
+  describe('path refs', () => {
+    it('encodes project and work item keys in the URL path', async () => {
+      const get = vi.spyOn(api, 'get').mockResolvedValueOnce({ id: 1 });
+
+      await getWorkItem(api, { project_key: '../x?y', work_item_key: 'a/b' });
+      expect(get).toHaveBeenCalledWith('/api/v1/projects/..%2Fx%3Fy/work_items/a%2Fb');
+    });
+  });
+
   describe('getBoard', () => {
     it('returns formatted board with column and work item IDs', async () => {
       vi.spyOn(api, 'get').mockResolvedValueOnce({

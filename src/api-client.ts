@@ -48,14 +48,14 @@ export class ApiClient {
   async post<T = unknown>(path: string, body?: unknown): Promise<T> {
     return this.request<T>(`${this.baseUrl}${path}`, {
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   }
 
   async patch<T = unknown>(path: string, body?: unknown): Promise<T> {
     return this.request<T>(`${this.baseUrl}${path}`, {
       method: 'PATCH',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   }
 
