@@ -117,6 +117,17 @@ describe('ApiClient', () => {
       await expect(client.get('/api/v1/projects')).rejects.toThrow(ApiError);
     });
 
+    it('raises ApiError with retry hint on 429', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        statusText: 'Too Many Requests',
+        headers: new Headers({ 'Retry-After': '30' }),
+      } as Response);
+
+      await expect(client.get('/api/v1/projects')).rejects.toThrow('Rate limited: retry after 30s');
+    });
+
     it('raises ApiError on 403', async () => {
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,

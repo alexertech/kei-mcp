@@ -13,6 +13,8 @@ function errorResult(error: unknown) {
     let errorType: string;
     if (error.statusCode === 404) {
       errorType = 'NOT_FOUND';
+    } else if (error.statusCode === 429) {
+      errorType = 'RATE_LIMITED';
     } else if (error.statusCode === 422) {
       errorType = 'VALIDATION_ERROR';
     } else if (error.statusCode === 0) {
@@ -178,7 +180,7 @@ export interface UpdateWorkItemArgs {
   priority?: 'none' | 'low' | 'medium' | 'high' | 'urgent';
   column_id?: number;
   position?: number;
-  assignee_id?: number;
+  assignee_id?: number | null;
   approved?: boolean;
 }
 
@@ -190,7 +192,7 @@ export async function updateWorkItem(api: ApiClient, args: UpdateWorkItemArgs, a
       ...(args.priority != null ? [`Priority: ${args.priority}`] : []),
       ...(args.column_id != null ? [`Column ID: ${args.column_id}`] : []),
       ...(args.position != null ? [`Position: ${args.position}`] : []),
-      ...(args.assignee_id != null ? [`Assignee ID: ${args.assignee_id}`] : []),
+      ...(args.assignee_id !== undefined ? [`Assignee ID: ${args.assignee_id ?? 'none (unassign)'}`] : []),
     ].join('\n');
     const details = `Work item: ${args.work_item_key || args.work_item_id}\n${changes}`;
     return { content: [{ type: 'text' as const, text: approvalPrompt('update', 'work item', details) }] };
@@ -205,7 +207,7 @@ export async function updateWorkItem(api: ApiClient, args: UpdateWorkItemArgs, a
     if (args.priority != null) workItem.priority = args.priority;
     if (args.column_id != null) workItem.column_id = args.column_id;
     if (args.position != null) workItem.position = args.position;
-    if (args.assignee_id != null) workItem.assignee_id = args.assignee_id;
+    if (args.assignee_id !== undefined) workItem.assignee_id = args.assignee_id;
 
     const wi = await api.patch<Record<string, unknown>>(
       `/api/v1/projects/${projectRef}/work_items/${workItemRef}`,

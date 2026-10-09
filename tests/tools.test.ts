@@ -169,6 +169,15 @@ describe('tools', () => {
   });
 
   describe('updateWorkItem', () => {
+    it('sends null assignee_id to unassign', async () => {
+      const patch = vi.spyOn(api, 'patch').mockResolvedValueOnce({
+        id: 42, identifier: 'PA-1', title: 'T', type: 'Task', priority: 'none',
+      });
+
+      await updateWorkItem(api, { project_id: 1, work_item_id: 1, assignee_id: null });
+      expect(patch).toHaveBeenCalledWith('/api/v1/projects/1/work_items/1', { work_item: { assignee_id: null } });
+    });
+
     it('updates a work item and returns confirmation with ID', async () => {
       vi.spyOn(api, 'patch').mockResolvedValueOnce({
         id: 42,

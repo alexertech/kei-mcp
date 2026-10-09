@@ -93,7 +93,7 @@ export function createServer(api: ApiClient, approvalConfig?: ApprovalConfig): M
         priority: z.enum(['none', 'low', 'medium', 'high', 'urgent']).optional().describe('New priority (optional)'),
         column_id: z.number().optional().describe('Move to this column ID (optional)'),
         position: z.number().optional().describe('Position within the column (optional)'),
-        assignee_id: z.number().optional().describe('Assign to this user ID (optional)'),
+        assignee_id: z.number().nullable().optional().describe('Assign to this user ID, or null to unassign (optional)'),
         approved: z.boolean().optional().describe('Set to true to confirm execution when approval is required'),
       },
       annotations: { readOnlyHint: false, destructiveHint: false },

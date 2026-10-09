@@ -80,10 +80,14 @@ export class ApiClient {
       });
 
       if (response.status === 401) {
-        throw new ApiError(401, 'Unauthorized: invalid or expired API key');
+        throw new ApiError(401, 'Unauthorized: invalid or expired API key. Generate a new one in Kei Settings (keys expire after 90 days)');
       }
       if (response.status === 403) {
         throw new ApiError(403, 'Forbidden: you don\'t have permission for this action');
+      }
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        throw new ApiError(429, `Rate limited${retryAfter ? `: retry after ${retryAfter}s` : ''}`);
       }
       if (response.status === 404) {
         throw new ApiError(404, 'Not found');
