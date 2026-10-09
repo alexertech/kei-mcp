@@ -69,6 +69,14 @@ Add to your `opencode.json`:
 }
 ```
 
+OpenCode prefixes tool names with the server name (`kei_list_projects`, ...). Control them with globs:
+
+```json
+{ "tools": { "kei_*": false }, "agent": { "my-agent": { "tools": { "kei_*": true } } } }
+```
+
+Check the connection with `opencode mcp list`.
+
 ### Cursor
 
 Add to your `.cursor/mcp.json`:
@@ -97,34 +105,25 @@ Once configured, your agent will have access to these tools:
 - **create_work_item** — Create a new task or bug
 - **update_work_item** — Update title, description, priority, column, position, or assignee
 - **add_activity** — Add a comment to a work item
+- **list_members** — List project members and their user IDs
+- **list_columns** — List board columns and their IDs
+
+Read tools are annotated `readOnlyHint`; write tools are non-destructive. Audit logs go to stderr, never stdout.
 
 ## Security
 
 ### Tool Definition Hashes
 
-SHA-256 hashes of the distributed JavaScript files are published below. You can verify these against your installed copy to detect tampering:
-
-```
-a83f3f9178d05bb05417de11683e5660f61043ae2a6b44cd79151babe2139e28  dist/api-client.js
-6676a1352bb49cfb42b8004fdd7da2133739c6f3788d9d785328c77991850f58  dist/approval.js
-8f4ee92ca1068009dd976b7c8a19b056c9f352207efe5ffc4caf73f3c48e0839  dist/audit.js
-9bcee89ce2a5153fc84e2a8f746c79f38be9741cdbebafe83b6b1da2bc9c9e9f  dist/index.js
-6b6d4ad6093f3c7488ae1fc0e970924a0013bd43c46af7e48fa1db9f5ad57cd9  dist/sanitize.js
-d7ed6dbc0337895d635aac414aaebdc25e6bfe0809ebd3db9fbc14306922c9ce  dist/server.js
-c3b171aa6f815921011354c1cb1f91ab536dcd41f62e96a72f9e0e1eef86c9bc  dist/tools.js
-```
-
-To verify your installed copy:
+Release hashes of the distributed JavaScript files are generated at publish time with `npm run hashes`. Compare them against your installed copy:
 
 ```bash
-npx kei-mcp --version  # ensure installed
 cd node_modules/kei-mcp
 shasum -a 256 dist/*.js
 ```
 
 ### Approval Mode
 
-Write operations (`create_work_item`, `update_work_item`, `add_activity`) support a `--require-approval` flag that requires explicit user confirmation before execution. Enable this in production environments.
+Write operations (`create_work_item`, `update_work_item`, `add_activity`) support a `--require-approval` flag that asks for confirmation before execution. This is advisory: the agent supplies the `approved` flag itself. For a hard guard, use your harness's own tool permissions.
 
 ## Development
 

@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import { ApiClient } from './api-client.js';
 import { ApprovalConfig } from './approval.js';
@@ -14,10 +15,12 @@ import {
   listColumns,
 } from './tools.js';
 
+const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
+
 export function createServer(api: ApiClient, approvalConfig?: ApprovalConfig): McpServer {
   const server = new McpServer({
     name: 'kei-mcp',
-    version: '1.3.0',
+    version,
   });
 
   server.registerTool(
