@@ -128,6 +128,28 @@ describe('tools', () => {
       await getWorkItem(api, { project_key: 'PA', work_item_key: 'PA-1' });
       expect(getSpy).toHaveBeenCalledWith('/api/v1/projects/PA/work_items/PA-1');
     });
+
+    it('handles null creator and activity user, and shows column moves', async () => {
+      vi.spyOn(api, 'get').mockResolvedValueOnce({
+        id: 42,
+        identifier: 'PA-1',
+        title: 'Test Task',
+        type: 'Task',
+        priority: 'high',
+        column: { id: 5, name: 'To Do' },
+        creator: null,
+        assignee: null,
+        description: null,
+        activities: [
+          { created_at: '2026-01-01', user: null, action: 'moved', from_column_name: 'To Do', to_column_name: 'Done' },
+        ],
+      });
+
+      const result = await getWorkItem(api, { project_id: 1, work_item_id: 1 });
+      expect(result.isError).toBeUndefined();
+      expect(result.content[0].text).toContain('Creator: Unknown');
+      expect(result.content[0].text).toContain('Unknown user: moved (To Do -> Done)');
+    });
   });
 
   describe('createWorkItem', () => {

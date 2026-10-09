@@ -95,19 +95,22 @@ export async function getWorkItem(api: ApiClient, args: GetWorkItemArgs) {
     const wi = await api.get<Record<string, unknown>>(`/api/v1/projects/${projectRef}/work_items/${workItemRef}`);
     const activities = (wi.activities as Array<Record<string, unknown>> | undefined)
       ?.map((a) => {
-        const user = a.user as Record<string, unknown>;
-        return `[${a.created_at as string}] ${sanitize(user.name as string)}: ${a.action as string}${a.body ? ` - ${sanitize(a.body as string)}` : ''}`;
+        const user = a.user as Record<string, unknown> | null;
+        const move = a.from_column_name || a.to_column_name
+          ? ` (${sanitize((a.from_column_name as string) ?? '?')} -> ${sanitize((a.to_column_name as string) ?? '?')})`
+          : '';
+        return `[${a.created_at as string}] ${user ? sanitize(user.name as string) : 'Unknown user'}: ${a.action as string}${move}${a.body ? ` - ${sanitize(a.body as string)}` : ''}`;
       })
       .join('\n') || 'No activities';
 
     const column = wi.column as Record<string, unknown>;
-    const creator = wi.creator as Record<string, unknown>;
+    const creator = wi.creator as Record<string, unknown> | null;
     const assignee = wi.assignee as Record<string, unknown> | null;
 
     const text = [
       `[id:${wi.id as number}] ${wi.identifier as string}: ${sanitize(wi.title as string)}`,
       `Type: ${wi.type as string} | Priority: ${wi.priority as string} | Column: ${sanitize(column.name as string)} [id:${column.id as number}]`,
-      `Creator: ${sanitize(creator.name as string)} | Assignee: ${assignee ? sanitize(assignee.name as string) : 'Unassigned'}`,
+      `Creator: ${creator ? sanitize(creator.name as string) : 'Unknown'} | Assignee: ${assignee ? sanitize(assignee.name as string) : 'Unassigned'}`,
       '',
       'Description:',
       sanitize((wi.description as string) || '(none)'),
