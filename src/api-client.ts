@@ -115,13 +115,19 @@ export class ApiClient {
         return undefined as T;
       }
 
-      return response.json() as Promise<T>;
+      return (await response.json()) as T;
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
       }
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new ApiError(0, 'Request timeout');
+        const isWrite = options.method !== undefined && options.method !== 'GET';
+        throw new ApiError(0, isWrite
+          ? 'Request timeout: the write may have been applied. Verify with get_board or get_work_item before retrying'
+          : 'Request timeout');
+      }
+      if (error instanceof SyntaxError) {
+        throw new ApiError(502, 'Invalid JSON response from Kei API');
       }
       if (error instanceof TypeError && error.message.includes('fetch')) {
         throw new ApiError(0, `Cannot connect to Kei API at ${this.baseUrl}`);

@@ -191,5 +191,19 @@ describe('ApiClient', () => {
 
       await expect(client.get('/api/v1/projects')).rejects.toThrow(/Request timeout/);
     });
+
+    it('warns that a timed-out write may have been applied', async () => {
+      const abortError = new Error('The operation was aborted');
+      abortError.name = 'AbortError';
+      vi.mocked(fetch).mockRejectedValueOnce(abortError);
+
+      await expect(client.post('/api/v1/projects/1/work_items', {})).rejects.toThrow(/write may have been applied/);
+    });
+
+    it('raises ApiError on a non-JSON success body', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(new Response('<html>proxy</html>', { status: 200 }));
+
+      await expect(client.get('/api/v1/projects')).rejects.toMatchObject({ statusCode: 502 });
+    });
   });
 });
