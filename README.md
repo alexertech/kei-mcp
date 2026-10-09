@@ -1,16 +1,44 @@
-# kei-mcp
+<p align="center">
+  <a href="https://www.getkei.com">
+    <img src="https://raw.githubusercontent.com/alexertech/kei-mcp/main/assets/kei_logo.png" alt="Kei" height="120">
+  </a>
+</p>
 
-MCP server for [Kei](https://kei.alexertech.com) project management. Allows AI agents (Claude Code, OpenCode, Cursor) to interact with your Kei projects.
+<h1 align="center">kei-mcp</h1>
 
-## Installation
+<p align="center">
+  MCP server for <a href="https://www.getkei.com">Kei</a>, a KISS project management tool.<br>
+  Tasks, Bugs, Kanban boards - nothing else.
+</p>
 
-No installation needed! Just use `npx`:
+<p align="center">
+  <a href="https://www.getkei.com"><strong>www.getkei.com</strong></a>
+</p>
+
+---
+
+Lets AI agents (Claude Code, OpenCode, Cursor) read your Kei boards, create and update work items, and comment on them.
+
+## Install
+
+### Claude Code (recommended)
+
+```bash
+claude plugin marketplace add alexertech/kei-mcp
+claude plugin install kei-mcp@kei
+```
+
+Claude Code prompts for your API key and stores it in secure storage.
+
+### Any MCP client (npx)
+
+No installation needed:
 
 ```bash
 npx -y kei-mcp --require-approval --api-key YOUR_API_KEY
 ```
 
-Or set environment variables:
+Or use environment variables:
 
 ```bash
 export KEI_API_KEY=your_api_key
@@ -25,40 +53,15 @@ npx -y kei-mcp --require-approval
 3. Under **API Keys**, enter a name (e.g., "OpenCode") and click **Generate Key**
 4. Copy the key from the modal — you won't see it again
 
-## Configuration
+Keys expire after 90 days.
+
+## Manual configuration
 
 ### Claude Code
 
-Add the MCP server:
-
 ```bash
-claude mcp add kei -- npx -y kei-mcp --require-approval
+claude mcp add kei -e KEI_API_KEY=your_api_key -- npx -y kei-mcp --require-approval
 ```
-
-Then configure the API key in your Claude Code settings:
-
-```json
-{
-  "mcpServers": {
-    "kei": {
-      "command": "npx",
-      "args": ["-y", "kei-mcp", "--require-approval"],
-      "env": {
-        "KEI_API_KEY": "your_api_key"
-      }
-    }
-  }
-}
-```
-
-### Claude Code plugin marketplace
-
-```bash
-claude plugin marketplace add alexertech/kei-mcp
-claude plugin install kei-mcp@kei
-```
-
-Claude Code prompts for your API key and stores it securely.
 
 ### OpenCode
 
@@ -106,13 +109,11 @@ Add to your `.cursor/mcp.json`:
 
 ## Available Tools
 
-Once configured, your agent will have access to these tools:
-
 - **list_projects** — List all your projects with task/bug counts
 - **get_board** — Get a project's board with columns and work items
 - **get_work_item** — Get detailed info about a specific work item
 - **create_work_item** — Create a new task or bug
-- **update_work_item** — Update title, description, priority, column, position, or assignee
+- **update_work_item** — Update title, description, priority, column, position, or assignee (`null` unassigns)
 - **add_activity** — Add a comment to a work item
 - **list_members** — List project members and their user IDs
 - **list_columns** — List board columns and their IDs
@@ -121,7 +122,11 @@ Read tools are annotated `readOnlyHint`; write tools are non-destructive. Audit 
 
 ## Security
 
-### Tool Definition Hashes
+### Approval Mode
+
+Write operations (`create_work_item`, `update_work_item`, `add_activity`) support a `--require-approval` flag that asks for confirmation before execution. This is advisory: the agent supplies the `approved` flag itself. For a hard guard, use your harness's own tool permissions.
+
+### Verifying the package
 
 Release hashes of the distributed JavaScript files are generated at publish time with `npm run hashes`. Compare them against your installed copy:
 
@@ -129,10 +134,6 @@ Release hashes of the distributed JavaScript files are generated at publish time
 cd node_modules/kei-mcp
 shasum -a 256 dist/*.js
 ```
-
-### Approval Mode
-
-Write operations (`create_work_item`, `update_work_item`, `add_activity`) support a `--require-approval` flag that asks for confirmation before execution. This is advisory: the agent supplies the `approved` flag itself. For a hard guard, use your harness's own tool permissions.
 
 ## Development
 
@@ -144,4 +145,4 @@ npm test
 
 ## License
 
-MIT
+[MIT](LICENSE) © Alex Barrios
