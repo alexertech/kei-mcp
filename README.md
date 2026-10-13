@@ -23,12 +23,14 @@ Lets AI agents (Claude Code, OpenCode, Cursor) read your Kei boards, create and 
 
 ### Claude Code (recommended)
 
-```bash
-claude plugin marketplace add alexertech/kei-mcp
-claude plugin install kei-mcp@kei
+Inside Claude Code:
+
+```
+/plugin marketplace add alexertech/kei-mcp
+/plugin install kei-mcp@kei
 ```
 
-Claude Code prompts for your API key and stores it in secure storage.
+The install dialog prompts for your API key and stores it in secure storage. To set or change it later, run `/plugin configure kei-mcp@kei` (Claude Code 2.1.285+). The shell command `claude plugin install` does not prompt for the key.
 
 ### Any MCP client (npx)
 
