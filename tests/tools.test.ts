@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ApiClient, ApiError } from '../src/api-client.js';
+import { NameResolver } from '../src/resolver.js';
 import {
   listProjects,
   getBoard,
@@ -13,9 +14,15 @@ import {
 
 describe('tools', () => {
   let api: ApiClient;
+  let resolver: NameResolver;
 
   beforeEach(() => {
     api = new ApiClient({ baseUrl: 'http://localhost:3100', apiKey: 'test-key' });
+    resolver = new NameResolver(api);
+  });
+
+  afterEach(() => {
+    delete process.env.KEI_USER_ID;
   });
 
   describe('listProjects', () => {
@@ -239,6 +246,20 @@ describe('tools', () => {
       });
       expect(postSpy).toHaveBeenCalledWith('/api/v1/projects/PA/work_items', expect.any(Object));
     });
+
+    it('resolves column_name to column_id via resolver', async () => {
+      const postSpy = vi.spyOn(api, 'post').mockResolvedValueOnce({
+        id: 99, identifier: 'PA-1', title: 'New Task', type: 'Task', priority: 'none',
+      });
+      vi.spyOn(api, 'get').mockResolvedValueOnce([
+        { id: 1, name: 'Backlog' },
+        { id: 5, name: 'To Do' },
+      ]);
+
+      await createWorkItem(api, { project_key: 'PA', title: 'New Task', column_name: 'to do' }, undefined, resolver);
+
+      expect(postSpy).toHaveBeenCalledWith('/api/v1/projects/PA/work_items', { work_item: { title: 'New Task', type: 'Task', priority: 'none', column_id: 5 } });
+    });
   });
 
   describe('updateWorkItem', () => {
@@ -295,6 +316,42 @@ describe('tools', () => {
 
       await updateWorkItem(api, { work_item_key: 'PA-1', title: 'U' });
       expect(patchSpy).toHaveBeenCalledWith('/api/v1/projects/PA/work_items/PA-1', expect.any(Object));
+    });
+
+    it('resolves column_name to column_id via resolver', async () => {
+      const patchSpy = vi.spyOn(api, 'patch').mockResolvedValueOnce({
+        id: 42, identifier: 'PA-1', title: 'U', type: 'Task', priority: 'none',
+      });
+      vi.spyOn(api, 'get').mockResolvedValueOnce([
+        { id: 1, name: 'Backlog' },
+        { id: 3, name: 'In Progress' },
+      ]);
+
+      await updateWorkItem(api, { work_item_key: 'PA-1', column_name: 'in progress' }, undefined, resolver);
+      expect(patchSpy).toHaveBeenCalledWith('/api/v1/projects/PA/work_items/PA-1', { work_item: { column_id: 3 } });
+    });
+
+    it('resolves assignee_name to assignee_id via resolver', async () => {
+      const patchSpy = vi.spyOn(api, 'patch').mockResolvedValueOnce({
+        id: 42, identifier: 'PA-1', title: 'U', type: 'Task', priority: 'none',
+      });
+      vi.spyOn(api, 'get').mockResolvedValueOnce([
+        { id: 1, name: 'Alice' },
+        { id: 7, name: 'Bob' },
+      ]);
+
+      await updateWorkItem(api, { work_item_key: 'PA-1', assignee_name: 'bob' }, undefined, resolver);
+      expect(patchSpy).toHaveBeenCalledWith('/api/v1/projects/PA/work_items/PA-1', { work_item: { assignee_id: 7 } });
+    });
+
+    it('resolves assignee_name "me" using KEI_USER_ID', async () => {
+      process.env.KEI_USER_ID = '42';
+      const patchSpy = vi.spyOn(api, 'patch').mockResolvedValueOnce({
+        id: 42, identifier: 'PA-1', title: 'U', type: 'Task', priority: 'none',
+      });
+
+      await updateWorkItem(api, { work_item_key: 'PA-1', assignee_name: 'me' }, undefined, resolver);
+      expect(patchSpy).toHaveBeenCalledWith('/api/v1/projects/PA/work_items/PA-1', { work_item: { assignee_id: 42 } });
     });
   });
 

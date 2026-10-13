@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { ApiClient } from './api-client.js';
 import { ApprovalConfig } from './approval.js';
 import { withAudit } from './audit.js';
+import { NameResolver } from './resolver.js';
 import {
   listProjects,
   getBoard,
@@ -22,8 +23,10 @@ const projectId = id;
 const workItemId = id;
 const projectKey = z.string().regex(/^[A-Za-z][A-Za-z0-9]*$/, 'Letters and digits only, e.g. "KEI"');
 const workItemKey = z.string().regex(/^[A-Za-z][A-Za-z0-9]*-\d+$/, 'Format "KEI-9"');
+const name = z.string().min(1).max(100);
 
 export function createServer(api: ApiClient, flags?: ApprovalConfig): McpServer {
+  const resolver = new NameResolver(api);
   const server = new McpServer({
     name: 'kei-mcp',
     version,
@@ -94,7 +97,7 @@ export function createServer(api: ApiClient, flags?: ApprovalConfig): McpServer 
   server.registerTool(
     'create_work_item',
     {
-      description: 'Create a new task or bug in a project. Use list_columns first to get a valid column_id.',
+      description: 'Create a new task or bug in a project. Use column_id or column_name (use list_columns to find valid columns).',
       inputSchema: {
         project_id: projectId.optional().describe('The project ID (use either project_id or project_key)'),
         project_key: projectKey.optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
@@ -102,17 +105,18 @@ export function createServer(api: ApiClient, flags?: ApprovalConfig): McpServer 
         type: z.enum(['Task', 'Bug']).optional().describe('The work item type'),
         priority: z.enum(['none', 'low', 'medium', 'high', 'urgent']).optional().describe('The priority level'),
         column_id: id.optional().describe('The column ID (use list_columns to find valid IDs)'),
+        column_name: name.optional().describe('Column name to place the item in (case-insensitive, resolves to column_id)'),
         description: z.string().optional().describe('The work item description (optional)'),
       },
       annotations: { readOnlyHint: false, destructiveHint: false },
     },
-    async (args) => withAudit('create_work_item', args, () => createWorkItem(api, args, approvalConfig))
+    async (args) => withAudit('create_work_item', args, () => createWorkItem(api, args, approvalConfig, resolver))
   );
 
   server.registerTool(
     'update_work_item',
     {
-      description: 'Update a work item\'s title, description, priority, column, position, or assignee. Accepts either numeric IDs or human-readable keys.',
+      description: 'Update a work item\'s title, description, priority, column, position, or assignee. Accepts either numeric IDs or human-readable keys. Use assignee_name "me" to assign to yourself (requires KEI_USER_ID env var).',
       inputSchema: {
         project_id: projectId.optional().describe('The project ID (use either project_id or project_key)'),
         project_key: projectKey.optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
@@ -122,12 +126,14 @@ export function createServer(api: ApiClient, flags?: ApprovalConfig): McpServer 
         description: z.string().optional().describe('New description (optional)'),
         priority: z.enum(['none', 'low', 'medium', 'high', 'urgent']).optional().describe('New priority (optional)'),
         column_id: id.optional().describe('Move to this column ID (optional)'),
+        column_name: name.optional().describe('Move to this column by name (case-insensitive, optional)'),
         position: z.number().int().min(0).optional().describe('Position within the column (optional)'),
         assignee_id: id.nullable().optional().describe('Assign to this user ID, or null to unassign (optional)'),
+        assignee_name: name.optional().describe('Assign to this member by name, or "me" for yourself (case-insensitive, optional)'),
       },
       annotations: { readOnlyHint: false, destructiveHint: false },
     },
-    async (args) => withAudit('update_work_item', args, () => updateWorkItem(api, args, approvalConfig))
+    async (args) => withAudit('update_work_item', args, () => updateWorkItem(api, args, approvalConfig, resolver))
   );
 
   server.registerTool(

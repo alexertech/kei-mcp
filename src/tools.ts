@@ -3,6 +3,7 @@ import { ApiError } from './api-client.js';
 import type { ApprovalConfig } from './approval.js';
 import { approvalPrompt, requestApproval } from './approval.js';
 import { fence } from './fence.js';
+import type { NameResolver } from './resolver.js';
 
 function pathRef(ref: string | number | undefined, label: string): string {
   if (ref === undefined || ref === '') {
@@ -153,12 +154,16 @@ export interface CreateWorkItemArgs {
   type?: 'Task' | 'Bug';
   priority?: 'none' | 'low' | 'medium' | 'high' | 'urgent';
   column_id?: number;
+  column_name?: string;
   description?: string;
 }
 
-export async function createWorkItem(api: ApiClient, args: CreateWorkItemArgs, approvalConfig?: ApprovalConfig) {
+export async function createWorkItem(api: ApiClient, args: CreateWorkItemArgs, approvalConfig?: ApprovalConfig, resolver?: NameResolver) {
   try {
     const projectRef = requireProjectRef(args);
+    if (resolver && args.column_name) {
+      args.column_id = await resolver.resolveColumn(projectRef, args.column_name);
+    }
     const details = [
       `Project: ${args.project_key || args.project_id}`,
       `Title: ${args.title}`,
@@ -201,14 +206,22 @@ export interface UpdateWorkItemArgs {
   description?: string;
   priority?: 'none' | 'low' | 'medium' | 'high' | 'urgent';
   column_id?: number;
+  column_name?: string;
   position?: number;
   assignee_id?: number | null;
+  assignee_name?: string;
 }
 
-export async function updateWorkItem(api: ApiClient, args: UpdateWorkItemArgs, approvalConfig?: ApprovalConfig) {
+export async function updateWorkItem(api: ApiClient, args: UpdateWorkItemArgs, approvalConfig?: ApprovalConfig, resolver?: NameResolver) {
   try {
     const projectRef = requireProjectRef(args);
     const workItemRef = requireWorkItemRef(args);
+    if (resolver && args.column_name) {
+      args.column_id = await resolver.resolveColumn(projectRef, args.column_name);
+    }
+    if (resolver && args.assignee_name) {
+      args.assignee_id = await resolver.resolveMember(projectRef, args.assignee_name);
+    }
     const changes = [
       ...(args.title != null ? [`Title: ${args.title}`] : []),
       ...(args.description != null ? [`Description: ${args.description}`] : []),
