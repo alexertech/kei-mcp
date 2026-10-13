@@ -14,8 +14,15 @@ function pathRef(ref: string | number | undefined, label: string): string {
   return encodeURIComponent(String(ref));
 }
 
-function requireProjectRef(args: { project_id?: number; project_key?: string }): string {
-  return pathRef(args.project_key || args.project_id, 'project_id or project_key');
+function projectKeyFromWorkItemKey(key: string): string {
+  return key.substring(0, key.lastIndexOf('-'));
+}
+
+function requireProjectRef(args: { project_id?: number; project_key?: string; work_item_key?: string }): string {
+  if (args.project_key) return pathRef(args.project_key, 'project_id or project_key');
+  if (args.project_id) return pathRef(args.project_id, 'project_id or project_key');
+  if (args.work_item_key) return pathRef(projectKeyFromWorkItemKey(args.work_item_key), 'project_id or project_key');
+  throw new ApiError(422, 'Missing project_id or project_key');
 }
 
 function requireWorkItemRef(args: { work_item_id?: number; work_item_key?: string }): string {

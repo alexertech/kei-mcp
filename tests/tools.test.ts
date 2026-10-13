@@ -158,6 +158,28 @@ describe('tools', () => {
       expect(getSpy).toHaveBeenCalledWith('/api/v1/projects/PA/work_items/PA-1');
     });
 
+    it('extracts project key from work_item_key when no project ref given', async () => {
+      const getSpy = vi.spyOn(api, 'get').mockResolvedValueOnce({
+        id: 42, identifier: 'PA-1', title: 'T', type: 'Task', priority: 'none',
+        column: { id: 5, name: 'To Do' }, creator: null, assignee: null,
+        description: null, activities: [],
+      });
+
+      await getWorkItem(api, { work_item_key: 'PA-1' });
+      expect(getSpy).toHaveBeenCalledWith('/api/v1/projects/PA/work_items/PA-1');
+    });
+
+    it('prefers explicit project ref over work_item_key prefix', async () => {
+      const getSpy = vi.spyOn(api, 'get').mockResolvedValueOnce({
+        id: 42, identifier: 'PA-1', title: 'T', type: 'Task', priority: 'none',
+        column: { id: 5, name: 'To Do' }, creator: null, assignee: null,
+        description: null, activities: [],
+      });
+
+      await getWorkItem(api, { project_key: 'XB', work_item_key: 'PA-1' });
+      expect(getSpy).toHaveBeenCalledWith('/api/v1/projects/XB/work_items/PA-1');
+    });
+
     it('handles null creator and activity user, and shows column moves', async () => {
       vi.spyOn(api, 'get').mockResolvedValueOnce({
         id: 42,
@@ -265,6 +287,15 @@ describe('tools', () => {
       });
       expect(patchSpy).toHaveBeenCalledWith('/api/v1/projects/PA/work_items/PA-1', expect.any(Object));
     });
+
+    it('extracts project key from work_item_key when no project ref given', async () => {
+      const patchSpy = vi.spyOn(api, 'patch').mockResolvedValueOnce({
+        id: 42, identifier: 'PA-1', title: 'U', type: 'Task', priority: 'none',
+      });
+
+      await updateWorkItem(api, { work_item_key: 'PA-1', title: 'U' });
+      expect(patchSpy).toHaveBeenCalledWith('/api/v1/projects/PA/work_items/PA-1', expect.any(Object));
+    });
   });
 
   describe('addActivity', () => {
@@ -292,6 +323,15 @@ describe('tools', () => {
         work_item_key: 'PA-1',
         body: 'This is a comment',
       });
+      expect(postSpy).toHaveBeenCalledWith('/api/v1/projects/PA/work_items/PA-1/activities', expect.any(Object));
+    });
+
+    it('extracts project key from work_item_key when no project ref given', async () => {
+      const postSpy = vi.spyOn(api, 'post').mockResolvedValueOnce({
+        body: 'This is a comment',
+      });
+
+      await addActivity(api, { work_item_key: 'PA-1', body: 'This is a comment' });
       expect(postSpy).toHaveBeenCalledWith('/api/v1/projects/PA/work_items/PA-1/activities', expect.any(Object));
     });
   });
