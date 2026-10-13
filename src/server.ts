@@ -7,6 +7,7 @@ import { withAudit } from './audit.js';
 import { NameResolver } from './resolver.js';
 import {
   listProjects,
+  listWorkItems,
   getBoard,
   getWorkItem,
   createWorkItem,
@@ -61,6 +62,23 @@ export function createServer(api: ApiClient, flags?: ApprovalConfig): McpServer 
       annotations: { readOnlyHint: true },
     },
     async () => withAudit('list_projects', {}, () => listProjects(api, {}))
+  );
+
+  server.registerTool(
+    'list_work_items',
+    {
+      description: 'List work items in a project with optional filters (column_id, assignee_id, priority, type).',
+      inputSchema: {
+        project_id: projectId.optional().describe('The project ID (use either project_id or project_key)'),
+        project_key: projectKey.optional().describe('The project key, e.g. "KEI" (use either project_id or project_key)'),
+        column_id: id.optional().describe('Filter by column ID (optional)'),
+        assignee_id: id.optional().describe('Filter by assignee ID (optional)'),
+        priority: z.enum(['none', 'low', 'medium', 'high', 'urgent']).optional().describe('Filter by priority (optional)'),
+        type: z.enum(['Task', 'Bug']).optional().describe('Filter by type (optional)'),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async (args) => withAudit('list_work_items', args, () => listWorkItems(api, args))
   );
 
   server.registerTool(

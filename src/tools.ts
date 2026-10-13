@@ -76,6 +76,40 @@ export async function listProjects(api: ApiClient, _args: ListProjectsArgs) {
   }
 }
 
+export interface ListWorkItemsArgs {
+  project_id?: number;
+  project_key?: string;
+  column_id?: number;
+  assignee_id?: number;
+  priority?: 'none' | 'low' | 'medium' | 'high' | 'urgent';
+  type?: 'Task' | 'Bug';
+}
+
+export async function listWorkItems(api: ApiClient, args: ListWorkItemsArgs) {
+  try {
+    const projectRef = requireProjectRef(args);
+    const params: Record<string, string> = {};
+    if (args.column_id != null) params.column_id = String(args.column_id);
+    if (args.assignee_id != null) params.assignee_id = String(args.assignee_id);
+    if (args.priority != null) params.priority = args.priority;
+    if (args.type != null) params.type = args.type;
+
+    const items = await api.get<Array<Record<string, unknown>>>(`/api/v1/projects/${projectRef}/work_items`, params);
+    return {
+      content: [{
+        type: 'text' as const,
+        text: items.length === 0
+          ? 'No work items found'
+          : items.map((wi) =>
+              `[id:${wi.id as number}] [${wi.identifier as string}] ${wi.title as string} (${(wi.priority as string) || 'none'}) [${(wi.type as string) || 'Task'}]`
+            ).join('\n'),
+      }],
+    };
+  } catch (error) {
+    return errorResult(error);
+  }
+}
+
 export interface GetBoardArgs {
   project_id?: number;
   project_key?: string;

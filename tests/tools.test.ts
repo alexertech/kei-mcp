@@ -3,6 +3,7 @@ import { ApiClient, ApiError } from '../src/api-client.js';
 import { NameResolver } from '../src/resolver.js';
 import {
   listProjects,
+  listWorkItems,
   getBoard,
   getWorkItem,
   createWorkItem,
@@ -43,6 +44,46 @@ describe('tools', () => {
       const result = await listProjects(api, {});
       expect(result.isError).toBe(true);
       expect(result.content[0].text).toContain('Error [API_ERROR]: Unauthorized');
+    });
+  });
+
+  describe('listWorkItems', () => {
+    it('returns formatted work item list with IDs', async () => {
+      vi.spyOn(api, 'get').mockResolvedValueOnce([
+        { id: 10, identifier: 'PA-1', title: 'Task 1', priority: 'high', type: 'Task' },
+        { id: 11, identifier: 'PA-2', title: 'Task 2', priority: 'medium', type: 'Bug' },
+      ]);
+
+      const result = await listWorkItems(api, { project_key: 'PA' });
+      expect(result.content[0].text).toContain('[id:10]');
+      expect(result.content[0].text).toContain('[PA-1] Task 1');
+      expect(result.content[0].text).toContain('[PA-2] Task 2');
+    });
+
+    it('passes filter params to the API', async () => {
+      const getSpy = vi.spyOn(api, 'get').mockResolvedValueOnce([]);
+
+      await listWorkItems(api, { project_id: 1, column_id: 5, priority: 'high', type: 'Task' });
+      expect(getSpy).toHaveBeenCalledWith('/api/v1/projects/1/work_items', {
+        column_id: '5',
+        priority: 'high',
+        type: 'Task',
+      });
+    });
+
+    it('returns "No work items found" for empty results', async () => {
+      vi.spyOn(api, 'get').mockResolvedValueOnce([]);
+
+      const result = await listWorkItems(api, { project_id: 1, assignee_id: 99 });
+      expect(result.content[0].text).toBe('No work items found');
+    });
+
+    it('handles API errors', async () => {
+      vi.spyOn(api, 'get').mockRejectedValueOnce(new ApiError(404, 'Not found'));
+
+      const result = await listWorkItems(api, { project_id: 999 });
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Error [NOT_FOUND]');
     });
   });
 
